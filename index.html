@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Crash Signal Helper</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background:#0f0f1a; color:#fff; text-align:center; padding:20px; }
+    h1 { color:#00ff9d; }
+    .container { max-width:800px; margin:auto; background:#1a1a2e; padding:20px; border-radius:15px; box-shadow:0 0 20px rgba(0,255,157,0.2); }
+    input, button { padding:12px; margin:5px; font-size:18px; border-radius:8px; border:none; }
+    input { background:#16213e; color:#fff; width:200px; }
+    button { background:#00ff9d; color:#000; cursor:pointer; width:220px; }
+    button:hover { background:#00cc7a; }
+    #history { margin:20px 0; padding:15px; background:#16213e; border-radius:10px; height:200px; overflow-y:scroll; text-align:left; }
+    .crash { padding:5px; margin:3px; background:#223; border-radius:5px; display:inline-block; }
+    .signal { font-size:24px; font-weight:bold; margin:20px; padding:15px; border-radius:10px; }
+    .low { background:#ff0066; }
+    .safe { background:#00ff9d; color:#000; }
+    .high { background:#ffeb3b; color:#000; }
+    footer { margin-top:40px; color:#666; font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Crash Signal Helper</h1>
+    <p>Enter the latest crash multiplier and get instant betting advice</p>
+    
+    <input type="number" step="0.01" id="newCrash" placeholder="e.g. 2.34" />
+    <button onclick="addCrash()">Add Round & Get Signal</button>
+    <button onclick="clearHistory()">Clear History</button>
+
+    <h2>Last 20 Crashes</h2>
+    <div id="history"></div>
+
+    <div id="signal" class="signal">Add some rounds to see signals</div>
+
+    <h3>Quick Tips</h3>
+    <p>• After 3+ crashes ≥ 3.00× → play safe (cash ~1.30–1.60×)<br>
+       • After 4+ crashes ≤ 1.50× → go aggressive (aim 2.50–4.00×)<br>
+       • Never risk more than you can lose!</p>
+  </div>
+
+  <footer>
+    Not financial advice • For entertainment only • Gamble responsibly
+  </footer>
+
+  <script>
+    let crashes = JSON.parse(localStorage.getItem('crashHistory') || '[]');
+    
+    function updateDisplay() {
+      const histDiv = document.getElementById('history');
+      histDiv.innerHTML = '';
+      crashes.slice(-20).reverse().forEach((c, i) => {
+        const el = document.createElement('span');
+        el.className = 'crash';
+        el.textContent = c.toFixed(2) + '× ';
+        if (c < 1.5) el.style.background = '#ff0066';
+        if (c >= 3) el.style.background = '#00ff9d';
+        histDiv.appendChild(el);
+      });
+
+      const recent = crashes.slice(-10);
+      const avg = recent.reduce((a,b)=>a+b,0)/recent.length || 0;
+      const lows = recent.filter(x=>x<1.5).length;
+      const highs = recent.filter(x=>x>=3).length;
+
+      let advice = "";
+      let clazz = "";
+
+      if (highs >= 3) {
+        advice = `CONSERVATIVE → Cash out at 1.30–1.60× (high streak detected)`;
+        clazz = "low";
+      } else if (lows >= 4) {
+        advice = `AGGRESSIVE → Aim for 2.50–4.00× (low streak breaking soon)`;
+        clazz = "high";
+      } else {
+        advice = `NEUTRAL → Cash out around ${(avg*1.05).toFixed(2)}× (normal flow)`;
+        clazz = "safe";
+      }
+
+      document.getElementById('signal').textContent = advice;
+      document.getElementById('signal').className = 'signal ' + clazz;
+
+      localStorage.setItem('crashHistory', JSON.stringify(crashes));
+    }
+
+    function addCrash() {
+      const val = parseFloat(document.getElementById('newCrash').value);
+      if (!isNaN(val) && val >= 1) {
+        crashes.push(val);
+        document.getElementById('newCrash').value = '';
+        updateDisplay();
+      } else {
+        alert("Please enter a valid crash (≥1.00)");
+      }
+    }
+
+    function clearHistory() {
+      if (confirm("Delete all history?")) {
+        crashes = [];
+        localStorage.removeItem('crashHistory');
+        updateDisplay();
+      }
+    }
+
+    // Auto-load on start
+    updateDisplay();
+  </script>
+</body>
+</html>
